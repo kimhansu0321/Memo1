@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>타임라인 브라우저 메모장</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; margin: 0; padding: 40px 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            box-sizing: border-box;
+        }
+        .memo-container {
+            background: white; padding: 30px; border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); width: 100%; max-width: 450px;
+        }
+        h2 { margin-top: 0; color: #333; text-align: center; font-size: 22px;}
+        textarea {
+            width: 100%; height: 80px;
+            padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+            resize: none; box-sizing: border-box; font-size: 15px;
+            margin-bottom: 15px; transition: border-color 0.3s;
+            line-height: 1.5;
+        }
+        textarea:focus { border-color: #4A90E2; outline: none; box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);}
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        button {
+            flex: 1; padding: 12px 0; border: none; border-radius: 8px;
+            cursor: pointer; color: white; font-weight: bold; transition: 0.2s;
+            font-size: 14px;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        .btn-save { background-color: #4CAF50; box-shadow: 0 4px 6px rgba(76, 175, 80, 0.2); }
+        .btn-load { background-color: #2196F3; box-shadow: 0 4px 6px rgba(33, 150, 243, 0.2); }
+        
+        /* 삭제 버튼 동적 스타일 */
+        .btn-delete { background-color: #f44336; box-shadow: 0 4px 6px rgba(244, 67, 54, 0.2); }
+        .btn-delete.active { background-color: #b71c1c; border: 2px solid #ffcdd2; box-sizing: border-box; animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(244,67,54,0.4);} 70% {box-shadow: 0 0 0 10px rgba(244,67,54,0);} 100% {box-shadow: 0 0 0 0 rgba(244,67,54,0);} }
+
+        /* 타임라인 스타일 */
+        #timeline { margin-top: 10px; padding-left: 20px; border-left: 3px solid #e0e0e0; display: none; }
+        .timeline-item {
+            position: relative; margin-bottom: 20px; padding: 15px;
+            background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        
+        /* 타임라인 점 */
+        .timeline-item::before {
+            content: ''; position: absolute; left: -28px; top: 18px;
+            width: 12px; height: 12px; background: #2196F3;
+            border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 1px #e0e0e0;
+        }
+        
+        .timeline-date { font-size: 12px; color: #888; margin-bottom: 8px; }
+        .timeline-content { font-size: 15px; color: #333; white-space: pre-wrap; word-break: break-word; }
+        .empty-msg { text-align: center; color: #888; font-size: 14px; margin-top: 20px; }
+
+        /* 삭제 모드 스타일 */
+        .delete-mode .timeline-item { cursor: pointer; border: 1px solid transparent; }
+        .delete-mode .timeline-item:hover {
+            background-color: #ffebee; border-color: #ef9a9a;
+        }
+        .delete-mode .timeline-item:hover .timeline-content { text-decoration: line-through; color: #d32f2f; }
+        .delete-mode .timeline-item::after {
+            content: '🗑️ 클릭하여 삭제'; position: absolute; right: 10px; top: 15px;
+            font-size: 12px; color: #d32f2f; opacity: 0; transition: 0.2s;
+        }
+        .delete-mode .timeline-item:hover::after { opacity: 1; }
+
+        /* 알림 메시지 영역 */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
+            border-radius: 8px; padding: 16px; position: fixed; z-index: 10; bottom: 30px; left: 50%; transform: translateX(-50%); font-size: 15px;
+            opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+<body>
+
+<div class="memo-container">
+    <h2>📝 나의 타임라인 메모장</h2>
+    <textarea id="memoInput" placeholder="여기에 메모를 작성하세요..."></textarea>
+    <div class="btn-group">
+        <button class="btn-save" onclick="saveMemo()">저장</button>
+        <button class="btn-load" onclick="loadMemo()">불러오기</button>
+        <button class="btn-delete" id="deleteBtn" onclick="toggleDeleteMode()">삭제 모드</button>
+    </div>
+    
+    <div id="timeline"></div>
+</div>
+
+<div id="toast">메시지</div>
+
+<script>
+    const memoField = document.getElementById('memoInput');
+    const timelineDiv = document.getElementById('timeline');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const STORAGE_KEY = 'timeline_memo_db';
+    
+    let isDeleteMode = false;
+
+    // 알림 띄우기 함수
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.innerText = message;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    // DB(LocalStorage)에서 메모 목록 가져오기
+    function getMemos() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    }
+
+    // 1. 저장 로직 (입력창 비우기 + 리스트 갱신)
+    function saveMemo() {
+        const text = memoField.value;
+        if (!text.trim()) return showToast("❌ 내용을 입력해주세요!");
+
+        const memos = getMemos();
+        const newMemo = {
+            id: Date.now(), // 고유 ID
+            content: text,
+            date: new Date().toLocaleString() // 현재 날짜 및 시간
+        };
+        
+        memos.unshift(newMemo); // 최신 메모를 가장 앞에 추가
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+        
+        memoField.value = ""; // 1. 텍스트 내용 지우기
+        showToast("✅ 메모가 저장되었습니다!");
+        
+        // 만약 리스트가 열려있거나 강제로 보여주길 원한다면 바로 렌더링
+        renderTimeline();
+    }
+
+    // 2. 불러오기 로직 (타임라인 형식 렌더링)
+    function loadMemo() {
+        // 불러오기를 누르면 삭제 모드를 해제합니다.
+        if (isDeleteMode) toggleDeleteMode();
+        
+        renderTimeline();
+        showToast("📂 메모 목록을 불러왔습니다.");
+    }
+
+    // 화면에 타임라인 리스트 그리기
+    function renderTimeline() {
+        const memos = getMemos();
+        timelineDiv.style.display = 'block';
+        timelineDiv.innerHTML = ''; // 기존 내용 초기화
+
+        if (memos.length === 0) {
+            timelineDiv.innerHTML = '<div class="empty-msg">저장된 메모가 없습니다.</div>';
+            return;
+        }
+
+        memos.forEach(memo => {
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            
+            // 삭제 모드일 때 클릭 이벤트 부착
+            item.onclick = function() {
+                if (isDeleteMode) deleteSingleMemo(memo.id);
+            };
+
+            const dateEl = document.createElement('div');
+            dateEl.className = 'timeline-date';
+            dateEl.innerText = memo.date;
+
+            const contentEl = document.createElement('div');
+            contentEl.className = 'timeline-content';
+            contentEl.innerText = memo.content;
+
+            item.appendChild(dateEl);
+            item.appendChild(contentEl);
+            timelineDiv.appendChild(item);
+        });
+    }
+
+    // 3. 삭제 버튼 토글 (삭제 모드 ON/OFF)
+    function toggleDeleteMode() {
+        const memos = getMemos();
+        if (memos.length === 0) return showToast("💬 삭제할 메모가 존재하지 않습니다.");
+
+        isDeleteMode = !isDeleteMode;
+        
+        if (isDeleteMode) {
+            deleteBtn.innerText = "❌ 삭제 취소";
+            deleteBtn.classList.add('active');
+            timelineDiv.classList.add('delete-mode');
+            renderTimeline(); // 목록 보장
+            showToast("🗑️ 삭제할 메모를 클릭해주세요!");
+        } else {
+            deleteBtn.innerText = "삭제 모드";
+            deleteBtn.classList.remove('active');
+            timelineDiv.classList.remove('delete-mode');
+            showToast("✅ 일반 모드로 돌아왔습니다.");
+        }
+    }
+
+    // 개별 메모 DB에서 삭제하기
+    function deleteSingleMemo(memoId) {
+        if (!confirm("이 메모를 정말 삭제하시겠습니까?")) return;
+
+        let memos = getMemos();
+        memos = memos.filter(memo => memo.id !== memoId);
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+        showToast("✅ 메모가 삭제되었습니다.");
+        
+        // 메모가 다 지워졌으면 삭제모드 자동 종료
+        if (memos.length === 0) {
+            toggleDeleteMode();
+        } else {
+            renderTimeline();
+        }
+    }
+
+    // 시작할 때 저장된 메모가があれば 타임라인 자동 표시
+    window.onload = function() {
+        if(getMemos().length > 0) {
+            renderTimeline();
+        }
+    };
+</script>
+
+</body>
+</html>
