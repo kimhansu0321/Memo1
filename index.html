@@ -3,81 +3,425 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>심플 DB 메모장</title>
+    <title>프리미엄 메모장</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; margin: 0; background: #f0f2f5;
-        }
-        .memo-container {
-            background: white; padding: 30px; border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 350px;
-        }
-        h2 { margin-top: 0; color: #333; text-align: center; font-size: 20px;}
-        textarea {
-            width: 100%; height: 75px;
-            padding: 12px; border: 1px solid #ddd; border-radius: 8px;
-            resize: none; box-sizing: border-box; font-size: 14px;
-            margin-bottom: 15px; transition: border-color 0.3s;
-        }
-        textarea:focus { border-color: #4A90E2; outline: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
         
-        .btn-group { display: flex; gap: 8px; }
-        button {
-            flex: 1; padding: 12px 0; border: none; border-radius: 8px;
-            cursor: pointer; color: white; font-weight: bold; transition: 0.2s;
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --secondary: #10B981;
+            --secondary-hover: #059669;
+            --danger: #EF4444;
+            --danger-hover: #DC2626;
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #0F172A;
+            --text-sub: #64748B;
         }
-        button:hover { opacity: 0.8; transform: translateY(-2px); }
-        button:active { transform: translateY(0); }
-        .btn-save { background-color: #4CAF50; }
-        .btn-load { background-color: #2196F3; }
-        .btn-delete { background-color: #f44336; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            padding: 3rem 1rem;
+            margin: 0;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+            padding: 2.5rem;
+            box-sizing: border-box;
+            height: fit-content;
+        }
+
+        h1 {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 130px;
+            padding: 1rem 1.25rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 1rem;
+            resize: none;
+            font-family: inherit;
+            font-size: 1.05rem;
+            line-height: 1.5;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+            margin-bottom: 1.5rem;
+            background: #F8FAFC;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.875rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        button:active {
+            transform: translateY(2px);
+        }
+
+        .btn-save { background: var(--primary); box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
+        .btn-save:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3); }
+
+        .btn-load { background: var(--secondary); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
+        .btn-load:hover { background: var(--secondary-hover); transform: translateY(-2px); box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.3); }
+
+        .btn-delete-mode { background: var(--danger); box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2); }
+        .btn-delete-mode:hover { background: var(--danger-hover); transform: translateY(-2px); box-shadow: 0 6px 8px -1px rgba(239, 68, 68, 0.3); }
+
+        .memo-list {
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .memo-item {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .memo-item:hover {
+            border-color: #CBD5E1;
+            background: #F1F5F9;
+        }
+
+        .memo-content {
+            flex: 1;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-main);
+        }
+
+        .memo-date {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-top: 0.5rem;
+        }
+
+        .memo-delete-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            margin-left: 1rem;
+            flex: 0 0 auto;
+        }
+
+        .memo-delete-btn:hover {
+            background: var(--danger-hover);
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            color: var(--text-main);
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateX(120%);
+            opacity: 0;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        @keyframes slideIn {
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.fade-out {
+            animation: fadeOut 0.3s ease-in forwards;
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateX(120%); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-sub);
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
-
-<div class="memo-container">
-    <h2>📝 간단 메모장</h2>
-    <textarea id="memoInput" placeholder="여기에 메모를 작성하세요... (브라우저 로컬에 저장됨)"></textarea>
-    <div class="btn-group">
-        <button class="btn-save" onclick="saveMemo()">저장</button>
-        <button class="btn-load" onclick="loadMemo()">불러오기</button>
-        <button class="btn-delete" onclick="deleteMemo()">삭제</button>
+    <div class="container">
+        <h1>✨ 프리미엄 메모장</h1>
+        <textarea id="memoInput" placeholder="여기에 메모를 작성하세요... (브라우저 로컬에 자동 저장됩니다)"></textarea>
+        <div class="btn-group">
+            <button class="btn-save" onclick="saveMemo()">저장하기</button>
+            <button class="btn-load" onclick="toggleMemoList()">목록 보기</button>
+            <button class="btn-delete-mode" id="delBtnMode" onclick="toggleDeleteMode()">삭제 모드</button>
+        </div>
+        <div id="memoList" class="memo-list"></div>
     </div>
-</div>
+    
+    <div class="toast-container" id="toastContainer"></div>
 
-<script>
-    const memoField = document.getElementById('memoInput');
-    const STORAGE_KEY = 'simple_memo_db';
+    <script>
+        const STORAGE_KEY = 'premium_memo_list';
+        let isDeleteMode = false;
 
-    function saveMemo() {
-        const content = memoField.value;
-        if (!content.trim()) return alert("내용을 입력해주세요.");
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            const icon = type === 'success' ? '✅' : '🚨';
+            toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+            
+            if(type === 'error') {
+                toast.style.borderLeft = '4px solid var(--danger)';
+            } else {
+                toast.style.borderLeft = '4px solid var(--secondary)';
+            }
 
-        localStorage.setItem(STORAGE_KEY, content);
-        alert("성공적으로 브라우저(로컬)에 저장되었습니다!");
-    }
+            container.appendChild(toast);
 
-    function loadMemo() {
-        const data = localStorage.getItem(STORAGE_KEY);
-        if (data) {
-            memoField.value = data;
-        } else {
-            memoField.value = "";
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
-    }
 
-    function deleteMemo() {
-        if (!confirm("저장된 메모를 삭제할까요?")) return;
+        function getMemos() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        }
 
-        localStorage.removeItem(STORAGE_KEY);
-        memoField.value = "";
-        alert("삭제되었습니다.");
-    }
+        function saveMemos(memos) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+        }
 
-    window.onload = loadMemo;
-</script>
+        function saveMemo() {
+            const content = document.getElementById('memoInput').value;
+            if(!content.trim()) {
+                showToast("내용을 비워둘 수 없습니다.", 'error');
+                return;
+            }
+            try {
+                const memos = getMemos();
+                const newMemo = {
+                    id: Date.now().toString(),
+                    content: content,
+                    date: new Date().toLocaleString('ko-KR')
+                };
+                memos.unshift(newMemo); 
+                saveMemos(memos);
+                
+                document.getElementById('memoInput').value = '';
+                showToast('메모가 성공적으로 등록 되었습니다!');
+                
+                const listEl = document.getElementById('memoList');
+                if (listEl.style.display === 'flex') {
+                    renderMemoList();
+                } else {
+                    toggleMemoList();
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('저장 중 시스템 오류가 발생했습니다.', 'error');
+            }
+        }
 
+        function toggleMemoList() {
+            const listEl = document.getElementById('memoList');
+            if (listEl.style.display === 'flex') {
+                listEl.style.display = 'none';
+                isDeleteMode = false;
+                updateDeleteBtnUI();
+            } else {
+                listEl.style.display = 'flex';
+                renderMemoList();
+                // showToast('메모 록록을 불러왔습니다.'); // UI를 너무 가려서 생략
+            }
+        }
+
+        function renderMemoList() {
+            const memos = getMemos();
+            const listEl = document.getElementById('memoList');
+            listEl.innerHTML = ''; 
+
+            if (memos.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">아직 저장된 메모가 없습니다. 첫 메모를 작성해보세요!</div>';
+                return;
+            }
+
+            memos.forEach(memo => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'memo-item';
+                itemEl.style.cursor = isDeleteMode ? 'default' : 'pointer';
+                
+                const contentEl = document.createElement('div');
+                contentEl.innerHTML = `
+                    <div class="memo-content">${escapeHTML(memo.content)}</div>
+                    <div class="memo-date">${memo.date}</div>
+                `;
+                
+                itemEl.appendChild(contentEl);
+
+                if (!isDeleteMode) {
+                    itemEl.onclick = () => {
+                        document.getElementById('memoInput').value = memo.content;
+                        showToast('글을 수정할 수 있도록 입력창으로 불려왔습니다.');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    };
+                } else {
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'memo-delete-btn';
+                    delBtn.textContent = '지우기';
+                    delBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteSingleMemo(memo.id);
+                    };
+                    itemEl.appendChild(delBtn);
+                }
+
+                listEl.appendChild(itemEl);
+            });
+        }
+
+        function toggleDeleteMode() {
+            const listEl = document.getElementById('memoList');
+            if (listEl.style.display !== 'flex') {
+                listEl.style.display = 'flex';
+                showToast('항목 오른쪽의 지우기 버튼을 눌러 삭제하세요.');
+            }
+            
+            isDeleteMode = !isDeleteMode;
+            updateDeleteBtnUI();
+            renderMemoList();
+        }
+        
+        function updateDeleteBtnUI() {
+            const btn = document.getElementById('delBtnMode');
+            if (isDeleteMode) {
+                btn.style.background = 'var(--danger-hover)';
+                btn.textContent = '❌ 취소하기';
+            } else {
+                btn.style.background = 'var(--danger)';
+                btn.textContent = '삭제 모드';
+            }
+        }
+
+        function deleteSingleMemo(id) {
+            if(!confirm("이 메모를 영구적으로 삭제하시겠습니까?")) return;
+            try {
+                let memos = getMemos();
+                memos = memos.filter(m => m.id !== id);
+                saveMemos(memos);
+                renderMemoList();
+                showToast('메모 하나가 삭제되었습니다.');
+                
+                if(memos.length === 0) {
+                    toggleDeleteMode();
+                }
+            } catch(err) {
+                showToast('삭제 실패!', 'error');
+            }
+        }
+        
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+        
+        window.onload = function() {
+            // 구버전 simple_memo_db 단일 데이터 마이그레이션
+            const oldData = localStorage.getItem('simple_memo_db');
+            if(oldData) {
+                const currentMemos = getMemos();
+                // 기존 데이터가 프리미엄 배열에 없다면 이전
+                const isAlreadyMigrated = currentMemos.some(m => m.content === oldData);
+                if(!isAlreadyMigrated) {
+                    const migrated = [{
+                        id: Date.now().toString(),
+                        content: oldData,
+                        date: new Date().toLocaleString('ko-KR')
+                    }];
+                    saveMemos([...currentMemos, ...migrated]);
+                }
+                localStorage.removeItem('simple_memo_db'); // 옮긴 후 삭제
+            }
+            
+            if(getMemos().length > 0) {
+                toggleMemoList();
+            }
+        };
+    </script>
 </body>
 </html>
