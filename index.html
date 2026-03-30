@@ -39,7 +39,7 @@
 
 <div class="memo-container">
     <h2>📝 간단 메모장</h2>
-    <textarea id="memoInput" placeholder="여기에 메모를 작성하세요... (DB에 저장됨)"></textarea>
+    <textarea id="memoInput" placeholder="여기에 메모를 작성하세요... (브라우저 로컬에 저장됨)"></textarea>
     <div class="btn-group">
         <button class="btn-save" onclick="saveMemo()">저장</button>
         <button class="btn-load" onclick="loadMemo()">불러오기</button>
@@ -49,54 +49,31 @@
 
 <script>
     const memoField = document.getElementById('memoInput');
-    const API_URL = '/api/memo';
+    const STORAGE_KEY = 'simple_memo_db';
 
-    async function saveMemo() {
+    function saveMemo() {
         const content = memoField.value;
         if (!content.trim()) return alert("내용을 입력해주세요.");
 
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content })
-            });
-            if (response.ok) {
-                alert("성공적으로 서버 DB에 저장되었습니다!");
-            }
-        } catch (error) {
-            alert("서버 통신 오류가 발생했습니다.");
+        localStorage.setItem(STORAGE_KEY, content);
+        alert("성공적으로 브라우저(로컬)에 저장되었습니다!");
+    }
+
+    function loadMemo() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) {
+            memoField.value = data;
+        } else {
+            memoField.value = "";
         }
     }
 
-    async function loadMemo() {
-        try {
-            const response = await fetch(API_URL);
-            const data = await response.json();
-            
-            if (data.content) {
-                memoField.value = data.content;
-            } else {
-                alert("DB에 저장된 메모가 없습니다.");
-                memoField.value = "";
-            }
-        } catch (error) {
-            alert("서버 연결에 실패했습니다. 서버가 실행 중인지 확인해주세요.");
-        }
-    }
+    function deleteMemo() {
+        if (!confirm("저장된 메모를 삭제할까요?")) return;
 
-    async function deleteMemo() {
-        if (!confirm("서버 DB에서 메모를 삭제할까요?")) return;
-
-        try {
-            const response = await fetch(API_URL, { method: 'DELETE' });
-            if (response.ok) {
-                memoField.value = "";
-                alert("삭제되었습니다.");
-            }
-        } catch (error) {
-            alert("서버 통신 오류가 발생했습니다.");
-        }
+        localStorage.removeItem(STORAGE_KEY);
+        memoField.value = "";
+        alert("삭제되었습니다.");
     }
 
     window.onload = loadMemo;
